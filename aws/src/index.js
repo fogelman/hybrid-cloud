@@ -27,26 +27,27 @@ const instanceRules = {
   const ec2 = await new AWS.EC2({ apiVersion: '2016-11-15' });
 
   const data = `#!/bin/bash
-  #!/bin/bash
-apt update -y
-curl -O https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/webserver.sh -o ~/etc/init.d/webserver.sh
-chmod +x /etc/init.d/webserver.sh
+  apt update -y
+  apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
+  curl -o /etc/init.d/webserver https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/webserver.sh
+  chmod +x /etc/init.d/webserver
+  update-rc.d webserver defaults
 `;
-
+  // update-rc.d webserver defaults
   const UserData = Buffer.from(data).toString('base64');
   var instanceId;
   await ec2
     .runInstances({
       ...instanceRules,
-      KeyName: 'default',
-      SecurityGroups: [secGroup],
+      KeyName: 'insper-fogelman',
+      SecurityGroups: ['david-default'],
       TagSpecifications: [
         {
           ResourceType: 'instance',
           Tags: [
             {
               Key: 'Name',
-              Value: 'cloud-project',
+              Value: 'david-webserver',
             },
           ],
         },
@@ -62,17 +63,21 @@ chmod +x /etc/init.d/webserver.sh
   // const elbv2 = await new AWS.ELBv2({ apiVersion: '2015-12-01' });
   // var autoscaling = await new AWS.AutoScaling({ apiVersion: '2011-01-01' });
 
-  // const rds = await new AWS.RDS();
+  const start = new Date().getTime();
+  await ec2
+    .waitFor(
+      'instanceStatusOk',
+      {
+        InstanceIds: [instanceId],
+      },
 
-  ec2.waitFor(
-    'instanceStatusOk',
-    {
-      InstanceIds: [],
-    },
-    function(err, data) {
-      if (err) console.log(err, err.stack);
-      // an error occurred
-      else console.log(data); // successful response
-    }
-  );
+      function(err, data) {
+        if (err) console.log(err, err.stack);
+        // an error occurred
+        // else console.log(data); // successful response
+      }
+    )
+    .promise();
+  console.log(`Time: ${new Date().getTime() - start}`);
+  console.log('terminei');
 })();
