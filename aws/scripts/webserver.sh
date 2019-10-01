@@ -1,3 +1,3 @@
 #!/bin/bash
-touch index.txt
-echo "rodei" >> index.txt
+touch /home/ubuntu/index.txt
+echo "rodei" >> /home/ubuntu/index.txt
