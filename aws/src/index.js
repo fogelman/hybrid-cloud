@@ -27,29 +27,38 @@ const instanceRules = {
   const ec2 = await new AWS.EC2({ apiVersion: '2016-11-15' });
 
   const data = `#!/bin/bash
-  curl -O link-aqui
-  #adicionar aqui no cron para executar`;
+  #!/bin/bash
+apt update -y
+curl -O https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/webserver.sh -o ~/etc/init.d/webserver.sh
+chmod +x /etc/init.d/webserver.sh
+`;
 
   const UserData = Buffer.from(data).toString('base64');
-
-  await ec2.runInstances({
-    ...instanceRules,
-    KeyName: 'default',
-    SecurityGroups: [secGroup],
-    TagSpecifications: [
-      {
-        ResourceType: 'instance',
-        Tags: [
-          {
-            Key: 'Name',
-            Value: 'cloud-project',
-          },
-        ],
-      },
-    ],
-    UserData,
-    DryRun: false,
-  });
+  var instanceId;
+  await ec2
+    .runInstances({
+      ...instanceRules,
+      KeyName: 'default',
+      SecurityGroups: [secGroup],
+      TagSpecifications: [
+        {
+          ResourceType: 'instance',
+          Tags: [
+            {
+              Key: 'Name',
+              Value: 'cloud-project',
+            },
+          ],
+        },
+      ],
+      UserData,
+      DryRun: false,
+    })
+    .promise()
+    .then(({ Instances }) => {
+      instanceId = Instances[0].InstanceId;
+    })
+    .catch(err => console.error(err));
   // const elbv2 = await new AWS.ELBv2({ apiVersion: '2015-12-01' });
   // var autoscaling = await new AWS.AutoScaling({ apiVersion: '2011-01-01' });
 
