@@ -29,9 +29,10 @@ const instanceRules = {
   const data = `#!/bin/bash
   apt update -y
   apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
-  curl -o /etc/init.d/webserver https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/webserver.sh
-  chmod +x /etc/init.d/webserver
-  update-rc.d webserver defaults
+  curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/webserver.sh -o /etc/init.d/webserver.sh
+  chmod +x /etc/init.d/webserver.sh
+  update-rc.d webserver.sh defaults
+  update-rc.d webserver.sh enable
 `;
   // update-rc.d webserver defaults
   const UserData = Buffer.from(data).toString('base64');
@@ -65,19 +66,12 @@ const instanceRules = {
 
   const start = new Date().getTime();
   await ec2
-    .waitFor(
-      'instanceStatusOk',
-      {
-        InstanceIds: [instanceId],
-      },
-
-      function(err, data) {
-        if (err) console.log(err, err.stack);
-        // an error occurred
-        // else console.log(data); // successful response
-      }
-    )
-    .promise();
-  console.log(`Time: ${new Date().getTime() - start}`);
-  console.log('terminei');
+    .waitFor('instanceStatusOk', {
+      InstanceIds: [instanceId],
+    })
+    .promise()
+    .catch(err => {
+      console.log(err, err.stack);
+    });
+  console.log(`Execution time: ${new Date().getTime() - start}`);
 })();
