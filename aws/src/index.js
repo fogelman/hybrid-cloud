@@ -34,7 +34,6 @@ const instanceRules = {
   update-rc.d webserver.sh defaults
   update-rc.d webserver.sh enable
 `;
-  // update-rc.d webserver defaults
   const UserData = Buffer.from(data).toString('base64');
   var instanceId;
   await ec2
@@ -61,10 +60,7 @@ const instanceRules = {
       instanceId = Instances[0].InstanceId;
     })
     .catch(err => console.error(err));
-  // const elbv2 = await new AWS.ELBv2({ apiVersion: '2015-12-01' });
-  // var autoscaling = await new AWS.AutoScaling({ apiVersion: '2011-01-01' });
 
-  const start = new Date().getTime();
   await ec2
     .waitFor('instanceStatusOk', {
       InstanceIds: [instanceId],
@@ -73,5 +69,4 @@ const instanceRules = {
     .catch(err => {
       console.log(err, err.stack);
     });
-  console.log(`Execution time: ${new Date().getTime() - start}`);
 })();
