@@ -153,36 +153,51 @@ const authorizeSecurityGroupIngress = async (ec2, GroupId) => {
     })
     .promise();
 
-  await elb
-    .createLoadBalancer({
-      AvailabilityZones: [process.env.AWS_AVAILABILITY],
-      Listeners: [
-        {
-          InstancePort: 80,
-          InstanceProtocol: 'HTTP',
-          LoadBalancerPort: 80,
-          Protocol: 'HTTP',
-        },
-      ],
-
-      LoadBalancerName: process.env.AWS_LOADBALANCER,
-      SecurityGroups: [groupLBId],
+  await elbv2
+    .createTargetGroup({
+      Name: process.env.AWS_TARGETGROUP,
+      port: 80,
+      Protocol: 'HTTP',
+      HealthCheckEnabled: true,
+      HealthCheckIntervalSeconds: 30,
+      HealthCheckPort: '8000',
+      HealthCheckProtocol: 'HTTP',
+      UnhealthyThresholdCount: 2,
+      HealthyThresholdCount: 2,
+      HealthCheckPath: '/healthcheck',
+      HealthCheckTimeoutSeconds: 2,
     })
     .promise();
+  // await elb
+  //   .createLoadBalancer({
+  //     AvailabilityZones: [process.env.AWS_AVAILABILITY],
+  //     Listeners: [
+  //       {
+  //         InstancePort: 80,
+  //         InstanceProtocol: 'HTTP',
+  //         LoadBalancerPort: 80,
+  //         Protocol: 'HTTP',
+  //       },
+  //     ],
 
-  await elb
-    .configureHealthCheck({
-      HealthCheck: {
-        HealthyThreshold: 2,
-        Interval: 30,
-        Target: 'HTTP:80/healthcheck',
-        Timeout: 3,
-        UnhealthyThreshold: 2,
-      },
-      LoadBalancerName: process.env.AWS_LOADBALANCER,
-    })
+  //     LoadBalancerName: process.env.AWS_LOADBALANCER,
+  //     SecurityGroups: [groupLBId],
+  //   })
+  //   .promise();
 
-    .promise();
+  // await elb
+  //   .configureHealthCheck({
+  //     HealthCheck: {
+  //       HealthyThreshold: 2,
+  //       Interval: 30,
+  //       Target: 'HTTP:80/healthcheck',
+  //       Timeout: 3,
+  //       UnhealthyThreshold: 2,
+  //     },
+  //     LoadBalancerName: process.env.AWS_LOADBALANCER,
+  //   })
+
+  //   .promise();
 
   await autoscaling
     .createAutoScalingGroup({

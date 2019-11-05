@@ -10,5 +10,7 @@
 ### END INIT INFO
 
 git clone --depth=1 --no-tags https://github.com/Fogelman/hybrid-cloud.git /home/ubuntu/hybrid-cloud
-
+cd /home/ubuntu/hybrid-cloud
+npm i
+pm2 start ./src/index.js
 exit 0
