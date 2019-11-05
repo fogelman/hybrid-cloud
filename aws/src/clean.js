@@ -19,14 +19,16 @@ const deleteGroup = async (ec2, GroupName) => {
     .then(({ SecurityGroups }) => {
       return SecurityGroups;
     });
-
   if (groups && groups.length > 0) {
-    await ec2.deleteSecurityGroup({ GroupName: GroupName }).promise();
+    console.log(`Deletando grupo ${GroupName}`);
+    await ec2.deleteSecurityGroup({ GroupName }).promise();
   }
 };
 
 (async () => {
   const ec2 = await new AWS.EC2({ apiVersion: '2016-11-15' });
+  const autoscaling = await new AWS.AutoScaling({ apiVersion: '2011-01-01' });
+  const elb = await new AWS.ELB({ apiVersion: '2012-06-01' });
   const instances = await ec2
     .describeInstances({
       Filters: [
@@ -55,7 +57,6 @@ const deleteGroup = async (ec2, GroupName) => {
   }
 
   await deleteGroup(ec2, process.env.AWS_SECURITYGROUP);
-  // await deleteGroup(ec2, process.env.AWS_SECURITYGROUP_ELB);
 
   await ec2.deleteKeyPair({ KeyName: process.env.AWS_KEYNAME }).promise();
 
@@ -77,4 +78,70 @@ const deleteGroup = async (ec2, GroupName) => {
       })
     );
   }
+
+  const autoScallingIds = await autoscaling
+    .describeAutoScalingGroups({
+      AutoScalingGroupNames: [process.env.AWS_AUTOSCALING],
+    })
+    .promise()
+    .then(({ AutoScalingGroups }) => {
+      return AutoScalingGroups.map(el => {
+        return el.AutoScalingGroupName;
+      });
+    });
+
+  if (autoScallingIds && autoScallingIds.length > 0) {
+    await autoscaling
+      .deleteAutoScalingGroup({
+        AutoScalingGroupName: process.env.AWS_AUTOSCALING,
+      })
+      .promise();
+  }
+
+  const launchConfig = await autoscaling
+    .describeLaunchConfigurations({
+      LaunchConfigurationNames: [process.env.AWS_LAUNCHCONFIG],
+    })
+    .promise()
+    .then(({ LaunchConfigurations }) => {
+      if (LaunchConfigurations && LaunchConfigurations.length > 0) {
+        return true;
+      }
+      return null;
+    });
+
+  if (launchConfig) {
+    await autoscaling
+      .deleteLaunchConfiguration({
+        LaunchConfigurationName: process.env.AWS_LAUNCHCONFIG,
+      })
+      .promise();
+  }
+
+  const elbs = await elb
+    .describeLoadBalancers({
+      LoadBalancerNames: [process.env.AWS_LOADBALANCER],
+    })
+    .promise()
+    .then(({ LoadBalancerDescriptions }) => {
+      console.log(JSON.stringify(LoadBalancerDescriptions));
+      return LoadBalancerDescriptions.flatMap(el => {
+        return el.LoadBalancerName;
+      });
+    })
+    .catch(e => {
+      if (e.code !== 'LoadBalancerNotFound') {
+        throw e;
+      }
+      return null;
+    });
+
+  if (elbs && elbs.length > 0) {
+    await elb
+      .deleteLoadBalancer({
+        LoadBalancerName: process.env.AWS_LOADBALANCER,
+      })
+      .promise();
+  }
+  await deleteGroup(ec2, process.env.AWS_SECURITYGROUP_ELB);
 })();
