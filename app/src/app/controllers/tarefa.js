@@ -1,23 +1,32 @@
 const yup = require('yup');
 const Tarefa = require('./../models/tarefa');
 
-const schema = yup.object().shape({
+const schemaAdd = yup.object().shape({
   title: yup.string().required(),
   description: yup.string().required(),
   done: yup.bool().default(false),
 });
 
+const schemaUpdate = yup.object().shape({
+  title: yup.string(),
+  description: yup.string(),
+  done: yup.bool(),
+});
+
 class TarefaController {
   async store(req, res) {
-    console.log(req.body);
-    if (!(await schema.isValid(req.body))) {
-      return res
-        .status(400)
-        .json({ error: 'Erro na validação do conteúdo do body' });
-    }
+    try {
+      if (!(await schemaAdd.isValid(req.body))) {
+        return res
+          .status(400)
+          .json({ error: 'Erro na validação do conteúdo do body' });
+      }
 
-    const tarefa = await Tarefa.create(req.body);
-    return res.json(tarefa);
+      const tarefa = await Tarefa.create(req.body);
+      return res.json(tarefa);
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   async show(req, res) {
@@ -26,40 +35,61 @@ class TarefaController {
       return res.status(400).json({ error: 'Erro na validação do conteúdo' });
     }
 
-    const tarefa = await Tarefa.findById(id);
-    return res.status(200).json(tarefa);
+    try {
+      const tarefa = await Tarefa.findById(id);
+      return res.status(200).json(tarefa);
+    } catch (e) {
+      console.log(e);
+    }
   }
   async list(req, res) {
-    const tarefa = await Tarefa.find({});
-    return res.json(tarefa);
+    try {
+      const tarefa = await Tarefa.find({});
+      return res.json(tarefa);
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   async delete(req, res) {
-    const tarefa = await Tarefa.findByIdAndDelete(req.params.id);
-    return res.json({});
+    try {
+      const tarefa = await Tarefa.findByIdAndDelete(req.params.id);
+      return res.json({});
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   async update(req, res) {
-    if (!(await schema.isValid(req.body))) {
-      return res
-        .status(400)
-        .json({ error: 'Erro na validação do conteúdo do body' });
-    }
+    console.log(req.body);
 
-    const tarefa = await Tarefa.findOne({ _id: req.params.id }, (err, doc) => {
-      if (err) {
-        return res.status(400).json({ error: 'Erro ao fazer update' });
+    const { title, description, done } = req.body;
+    try {
+      if (!(await schemaUpdate.isValid(req.body))) {
+        return res
+          .status(400)
+          .json({ error: 'Erro na validação do conteúdo do body' });
       }
 
-      doc.value = req.body.value;
-
-      doc.save(function(err) {
+      await Tarefa.findOne({ _id: req.params.id }, (err, doc) => {
         if (err) {
           return res.status(400).json({ error: 'Erro ao fazer update' });
         }
-        return res.json(doc);
+
+        doc.title = title ? title : doc.title;
+        doc.done = done ? done : doc.done;
+        doc.description = description ? description : doc.description;
+
+        doc.save(function(err) {
+          if (err) {
+            return res.status(400).json({ error: 'Erro ao fazer update' });
+          }
+          return res.json(doc);
+        });
       });
-    });
+    } catch (e) {
+      console.log(e);
+    }
   }
 }
 
