@@ -27,6 +27,9 @@ const instanceRules = {
 const data = `#!/bin/bash
 apt update -y
 apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
+curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/init.sh -o /home/ubuntu/init.sh
+chmod +x /home/ubuntu/init.sh
+sh /home/ubuntu/init.sh
 curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/webserver.sh -o /etc/init.d/webserver.sh
 chmod +x /etc/init.d/webserver.sh
 update-rc.d webserver.sh defaults
@@ -196,7 +199,7 @@ const describeVpcs = async ec2 => {
       Port: 3333,
       Protocol: 'HTTP',
       HealthCheckEnabled: true,
-      HealthCheckIntervalSeconds: 30,
+      HealthCheckIntervalSeconds: 10,
       // HealthCheckPort: '3333',
       HealthCheckProtocol: 'HTTP',
       UnhealthyThresholdCount: 2,
@@ -208,43 +211,63 @@ const describeVpcs = async ec2 => {
     })
     .promise()
     .then(({ TargetGroups }) => {
-      TargetGroups.map(el => {
+      return TargetGroups.map(el => {
         return el.TargetGroupArn;
       });
     });
 
   console.log('Target group criado');
 
-  // const loadbalancers = await elbv2
-  //   .createLoadBalancer({
-  //     Name: process.env.AWS_LOADBALANCER,
-  //     Scheme: 'internet-facing',
-  //     Subnets: subnets,
-  //     SecurityGroups: [groupLBId],
-  //   })
-  //   .promise()
-  //   .catch(e => {
-  //     console.log(e);
-  //   })
-  //   .then(({ LoadBalancers }) => {
-  //     LoadBalancers.map(el => el.LoadBalancerArn);
-  //   });
-  // console.log('Criação do Load Balancer');
-  // await elbv2
-  //   .createListener({
-  //     DefaultActions: [
-  //       {
-  //         TargetGroupArn: targets[0],
-  //         Type: 'forward',
-  //       },
-  //     ],
-  //     LoadBalancerArn: loadbalancers[0],
-  //     Port: 80,
-  //     Protocol: 'HTTP',
-  //   })
-  //   .promise();
+  await autoscaling
+    .createAutoScalingGroup({
+      AutoScalingGroupName: process.env.AWS_AUTOSCALING,
+      AvailabilityZones: [process.env.AWS_AVAILABILITY],
+      HealthCheckGracePeriod: 180,
+      HealthCheckType: 'ELB',
 
-  // console.log('Criação do Load Balancer listener');
+      LaunchConfigurationName: process.env.AWS_LAUNCHCONFIG,
+      TargetGroupARNs: targets,
+      MaxSize: 3,
+      DesiredCapacity: 1,
+      MinSize: 1,
+      Tags: [
+        { Key: 'Name', Value: process.env.AWS_PROJECTNAME },
+        { Key: 'Description', Value: 'Automatic instance' },
+      ],
+    })
+    .promise();
+
+  console.log('Criação do AutoScalling group');
+
+  const loadbalancers = await elbv2
+    .createLoadBalancer({
+      Name: process.env.AWS_LOADBALANCER,
+      Scheme: 'internet-facing',
+      Subnets: subnets,
+      SecurityGroups: [groupLBId],
+    })
+    .promise()
+    .catch(e => {})
+    .then(({ LoadBalancers }) => {
+      return LoadBalancers.map(el => el.LoadBalancerArn);
+    });
+  console.log('Criação do Load Balancer');
+
+  await elbv2
+    .createListener({
+      DefaultActions: [
+        {
+          TargetGroupArn: targets[0],
+          Type: 'forward',
+        },
+      ],
+      LoadBalancerArn: loadbalancers[0],
+      Port: 80,
+      Protocol: 'HTTP',
+    })
+    .promise();
+
+  console.log('Criação do Load Balancer listener');
 
   // await elbv2
   //   .waitFor('loadBalancerAvailable', {
@@ -252,63 +275,4 @@ const describeVpcs = async ec2 => {
   //     // ... input parameters ...
   //   })
   //   .promise();
-  await autoscaling
-    .createAutoScalingGroup({
-      AutoScalingGroupName: process.env.AWS_AUTOSCALING,
-      AvailabilityZones: [process.env.AWS_AVAILABILITY],
-      HealthCheckGracePeriod: 180,
-      HealthCheckType: 'ELB',
-      LaunchConfigurationName: process.env.AWS_LAUNCHCONFIG,
-      TargetGroupARNs: targets,
-      MaxSize: 3,
-      DesiredCapacity: 1,
-      MinSize: 1,
-      Tags: [{ Key: 'Name', Value: process.env.AWS_PROJECTNAME }],
-    })
-    .promise();
-
-  console.log('Criação do AutoScalling group');
 })();
-
-// await autoscaling.createLaunchConfiguration({
-//   LaunchConfigurationName: process.env.AWS_LAUNCHTEMPLATE,
-//   BlockDeviceMappings: [
-//     {
-//       DeviceIndex: 0,
-//       AssociatePublicIpAddress: true,
-//       Groups: [groupId],
-//       DeleteOnTermination: true,
-//     },
-//   ],
-// });
-
-// await elb
-//   .createLoadBalancer({
-//     AvailabilityZones: [process.env.AWS_AVAILABILITY],
-//     Listeners: [
-//       {
-//         InstancePort: 80,
-//         InstanceProtocol: 'HTTP',
-//         LoadBalancerPort: 80,
-//         Protocol: 'HTTP',
-//       },
-//     ],
-
-//     LoadBalancerName: process.env.AWS_LOADBALANCER,
-//     SecurityGroups: [groupLBId],
-//   })
-//   .promise();
-
-// await elb
-//   .configureHealthCheck({
-//     HealthCheck: {
-//       HealthyThreshold: 2,
-//       Interval: 30,
-//       Target: 'HTTP:80/healthcheck',
-//       Timeout: 3,
-//       UnhealthyThreshold: 2,
-//     },
-//     LoadBalancerName: process.env.AWS_LOADBALANCER,
-//   })
-
-//   .promise();

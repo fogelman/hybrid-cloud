@@ -1,7 +1,4 @@
 const AWS = require('aws-sdk');
-const path = require('path');
-const fs = require('fs');
-const { promisify } = require('util');
 require('dotenv').config();
 
 AWS.config = new AWS.Config({
@@ -83,6 +80,60 @@ const terminateInstances = async (ec2, GroupName) => {
     );
   }
 
+  const elbs = await elbv2
+    .describeLoadBalancers({
+      Names: [process.env.AWS_LOADBALANCER],
+    })
+    .promise()
+    .then(({ LoadBalancers }) => {
+      return LoadBalancers.map(el => {
+        return el.LoadBalancerArn;
+      });
+    })
+    .catch(e => {
+      if (e.code !== 'LoadBalancerNotFound') {
+        throw e;
+      }
+      return null;
+    });
+
+  if (elbs && elbs.length > 0) {
+    const listeners = await Promise.all(
+      elbs.flatMap(el => {
+        return elbv2
+          .describeListeners({ LoadBalancerArn: el })
+          .promise()
+          .then(({ Listeners }) => {
+            console.log(listeners);
+            return Listeners.flatMap(el => {
+              if (el.ListenerArn) {
+                return el.ListenerArn;
+              }
+              return;
+            });
+          });
+      })
+    );
+    console.log(listeners);
+    if (listeners && listeners.length > 0) {
+      await Promise.all(
+        listeners.map(el => {
+          return elbv2
+            .deleteListener({ ListenerArn: el })
+            .promise()
+            .catch(e => {
+              console.log(e, e.stack);
+            });
+        })
+      );
+    }
+    await Promise.all(
+      elbs.map(el => {
+        return elbv2.deleteLoadBalancer({ LoadBalancerArn: el }).promise();
+      })
+    );
+  }
+
   const autoScallingIds = await autoscaling
     .describeAutoScalingGroups({
       AutoScalingGroupNames: [process.env.AWS_AUTOSCALING],
@@ -120,31 +171,6 @@ const terminateInstances = async (ec2, GroupName) => {
         LaunchConfigurationName: process.env.AWS_LAUNCHCONFIG,
       })
       .promise();
-  }
-
-  const elbs = await elbv2
-    .describeLoadBalancers({
-      Names: [process.env.AWS_LOADBALANCER],
-    })
-    .promise()
-    .then(({ LoadBalancers }) => {
-      return LoadBalancers.flatMap(el => {
-        return el.LoadBalancerArn;
-      });
-    })
-    .catch(e => {
-      if (e.code !== 'LoadBalancerNotFound') {
-        throw e;
-      }
-      return null;
-    });
-
-  if (elbs && elbs.length > 0) {
-    await Promise.all(
-      elbs.map(el => {
-        return elbv2.deleteLoadBalancer({ LoadBalancerArn: el }).promise();
-      })
-    );
   }
 
   const targets = await elbv2
