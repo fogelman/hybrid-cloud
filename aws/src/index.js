@@ -63,9 +63,33 @@ const authorizeSecurityGroupIngress = async (ec2, GroupId) => {
           ToPort: 22,
           IpRanges: [{ CidrIp: '0.0.0.0/0' }],
         },
+        {
+          IpProtocol: 'tcp',
+          FromPort: 3333,
+          ToPort: 3333,
+          IpRanges: [{ CidrIp: '0.0.0.0/0' }],
+        },
       ],
     })
     .promise();
+};
+
+const describeVpcs = async ec2 => {
+  return await ec2
+    .describeVpcs({
+      Filters: [
+        {
+          Name: 'isDefault',
+          Values: ['true'],
+        },
+      ],
+    })
+    .promise()
+    .then(({ Vpcs }) => {
+      if (Vpcs && Vpcs.length > 0) {
+        return Vpcs[0].VpcId;
+      }
+    });
 };
 
 (async () => {
@@ -73,6 +97,16 @@ const authorizeSecurityGroupIngress = async (ec2, GroupId) => {
   const autoscaling = await new AWS.AutoScaling({ apiVersion: '2011-01-01' });
   const elb = await new AWS.ELB({ apiVersion: '2012-06-01' });
   var elbv2 = new AWS.ELBv2({ apiVersion: '2015-12-01' });
+  const vpc = await describeVpcs(ec2);
+  const subnets = await ec2
+    .describeSubnets({
+      Filters: [{ Name: 'vpc-id', Values: [vpc] }],
+    })
+    .promise()
+    .then(({ Subnets }) => {
+      return Subnets.map(el => el.SubnetId);
+    });
+
   const groupId = await createSecurityGroup(ec2, process.env.AWS_SECURITYGROUP);
   const groupLBId = await createSecurityGroup(
     ec2,
@@ -100,7 +134,7 @@ const authorizeSecurityGroupIngress = async (ec2, GroupId) => {
           Tags: [
             {
               Key: 'Name',
-              Value: 'david-webserver',
+              Value: process.env.AWS_PROJECTNAME,
             },
           ],
         },
@@ -150,55 +184,74 @@ const authorizeSecurityGroupIngress = async (ec2, GroupId) => {
       InstanceType: 't2.micro',
       LaunchConfigurationName: process.env.AWS_LAUNCHCONFIG,
       SecurityGroups: [groupId],
+      KeyName: process.env.AWS_KEYNAME,
     })
     .promise();
 
-  await elbv2
+  console.log('Create launch configuration');
+
+  const targets = await elbv2
     .createTargetGroup({
       Name: process.env.AWS_TARGETGROUP,
-      port: 80,
+      Port: 3333,
       Protocol: 'HTTP',
       HealthCheckEnabled: true,
       HealthCheckIntervalSeconds: 30,
-      HealthCheckPort: '8000',
+      // HealthCheckPort: '3333',
       HealthCheckProtocol: 'HTTP',
       UnhealthyThresholdCount: 2,
       HealthyThresholdCount: 2,
       HealthCheckPath: '/healthcheck',
       HealthCheckTimeoutSeconds: 2,
-    })
-    .promise();
-  // await elb
-  //   .createLoadBalancer({
-  //     AvailabilityZones: [process.env.AWS_AVAILABILITY],
-  //     Listeners: [
-  //       {
-  //         InstancePort: 80,
-  //         InstanceProtocol: 'HTTP',
-  //         LoadBalancerPort: 80,
-  //         Protocol: 'HTTP',
-  //       },
-  //     ],
 
-  //     LoadBalancerName: process.env.AWS_LOADBALANCER,
+      VpcId: vpc,
+    })
+    .promise()
+    .then(({ TargetGroups }) => {
+      TargetGroups.map(el => {
+        return el.TargetGroupArn;
+      });
+    });
+
+  console.log('Target group criado');
+
+  // const loadbalancers = await elbv2
+  //   .createLoadBalancer({
+  //     Name: process.env.AWS_LOADBALANCER,
+  //     Scheme: 'internet-facing',
+  //     Subnets: subnets,
   //     SecurityGroups: [groupLBId],
   //   })
-  //   .promise();
-
-  // await elb
-  //   .configureHealthCheck({
-  //     HealthCheck: {
-  //       HealthyThreshold: 2,
-  //       Interval: 30,
-  //       Target: 'HTTP:80/healthcheck',
-  //       Timeout: 3,
-  //       UnhealthyThreshold: 2,
-  //     },
-  //     LoadBalancerName: process.env.AWS_LOADBALANCER,
+  //   .promise()
+  //   .catch(e => {
+  //     console.log(e);
   //   })
-
+  //   .then(({ LoadBalancers }) => {
+  //     LoadBalancers.map(el => el.LoadBalancerArn);
+  //   });
+  // console.log('Criação do Load Balancer');
+  // await elbv2
+  //   .createListener({
+  //     DefaultActions: [
+  //       {
+  //         TargetGroupArn: targets[0],
+  //         Type: 'forward',
+  //       },
+  //     ],
+  //     LoadBalancerArn: loadbalancers[0],
+  //     Port: 80,
+  //     Protocol: 'HTTP',
+  //   })
   //   .promise();
 
+  // console.log('Criação do Load Balancer listener');
+
+  // await elbv2
+  //   .waitFor('loadBalancerAvailable', {
+  //     Names: [process.env.AWS_LOADBALANCER],
+  //     // ... input parameters ...
+  //   })
+  //   .promise();
   await autoscaling
     .createAutoScalingGroup({
       AutoScalingGroupName: process.env.AWS_AUTOSCALING,
@@ -206,9 +259,56 @@ const authorizeSecurityGroupIngress = async (ec2, GroupId) => {
       HealthCheckGracePeriod: 180,
       HealthCheckType: 'ELB',
       LaunchConfigurationName: process.env.AWS_LAUNCHCONFIG,
-      LoadBalancerNames: [process.env.AWS_LOADBALANCER],
+      TargetGroupARNs: targets,
       MaxSize: 3,
+      DesiredCapacity: 1,
       MinSize: 1,
+      Tags: [{ Key: 'Name', Value: process.env.AWS_PROJECTNAME }],
     })
     .promise();
+
+  console.log('Criação do AutoScalling group');
 })();
+
+// await autoscaling.createLaunchConfiguration({
+//   LaunchConfigurationName: process.env.AWS_LAUNCHTEMPLATE,
+//   BlockDeviceMappings: [
+//     {
+//       DeviceIndex: 0,
+//       AssociatePublicIpAddress: true,
+//       Groups: [groupId],
+//       DeleteOnTermination: true,
+//     },
+//   ],
+// });
+
+// await elb
+//   .createLoadBalancer({
+//     AvailabilityZones: [process.env.AWS_AVAILABILITY],
+//     Listeners: [
+//       {
+//         InstancePort: 80,
+//         InstanceProtocol: 'HTTP',
+//         LoadBalancerPort: 80,
+//         Protocol: 'HTTP',
+//       },
+//     ],
+
+//     LoadBalancerName: process.env.AWS_LOADBALANCER,
+//     SecurityGroups: [groupLBId],
+//   })
+//   .promise();
+
+// await elb
+//   .configureHealthCheck({
+//     HealthCheck: {
+//       HealthyThreshold: 2,
+//       Interval: 30,
+//       Target: 'HTTP:80/healthcheck',
+//       Timeout: 3,
+//       UnhealthyThreshold: 2,
+//     },
+//     LoadBalancerName: process.env.AWS_LOADBALANCER,
+//   })
+
+//   .promise();

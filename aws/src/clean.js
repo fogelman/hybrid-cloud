@@ -25,16 +25,13 @@ const deleteGroup = async (ec2, GroupName) => {
   }
 };
 
-(async () => {
-  const ec2 = await new AWS.EC2({ apiVersion: '2016-11-15' });
-  const autoscaling = await new AWS.AutoScaling({ apiVersion: '2011-01-01' });
-  const elb = await new AWS.ELB({ apiVersion: '2012-06-01' });
+const terminateInstances = async (ec2, GroupName) => {
   const instances = await ec2
     .describeInstances({
       Filters: [
         {
           Name: 'instance.group-name',
-          Values: [process.env.AWS_SECURITYGROUP],
+          Values: [GroupName],
         },
       ],
     })
@@ -55,9 +52,16 @@ const deleteGroup = async (ec2, GroupName) => {
       })
       .promise();
   }
+};
 
+(async () => {
+  const ec2 = await new AWS.EC2({ apiVersion: '2016-11-15' });
+  const autoscaling = await new AWS.AutoScaling({ apiVersion: '2011-01-01' });
+  const elb = await new AWS.ELB({ apiVersion: '2012-06-01' });
+  const elbv2 = await new AWS.ELBv2();
+
+  await terminateInstances(ec2, process.env.AWS_SECURITYGROUP);
   await deleteGroup(ec2, process.env.AWS_SECURITYGROUP);
-
   await ec2.deleteKeyPair({ KeyName: process.env.AWS_KEYNAME }).promise();
 
   const imageIds = await ec2
@@ -118,15 +122,14 @@ const deleteGroup = async (ec2, GroupName) => {
       .promise();
   }
 
-  const elbs = await elb
+  const elbs = await elbv2
     .describeLoadBalancers({
-      LoadBalancerNames: [process.env.AWS_LOADBALANCER],
+      Names: [process.env.AWS_LOADBALANCER],
     })
     .promise()
-    .then(({ LoadBalancerDescriptions }) => {
-      console.log(JSON.stringify(LoadBalancerDescriptions));
-      return LoadBalancerDescriptions.flatMap(el => {
-        return el.LoadBalancerName;
+    .then(({ LoadBalancers }) => {
+      return LoadBalancers.flatMap(el => {
+        return el.LoadBalancerArn;
       });
     })
     .catch(e => {
@@ -137,11 +140,40 @@ const deleteGroup = async (ec2, GroupName) => {
     });
 
   if (elbs && elbs.length > 0) {
-    await elb
-      .deleteLoadBalancer({
-        LoadBalancerName: process.env.AWS_LOADBALANCER,
+    await Promise.all(
+      elbs.map(el => {
+        return elbv2.deleteLoadBalancer({ LoadBalancerArn: el }).promise();
       })
-      .promise();
+    );
   }
+
+  const targets = await elbv2
+    .describeTargetGroups({
+      Names: [process.env.AWS_TARGETGROUP],
+    })
+    .promise()
+    .then(({ TargetGroups }) => {
+      return TargetGroups.flatMap(el => {
+        return el.TargetGroupArn;
+      });
+    })
+    .catch(e => {
+      if (e.code !== 'TargetGroupNotFound') {
+        throw e;
+      }
+    });
+
+  if (targets && targets.length > 0) {
+    await Promise.all(
+      targets.map(async el => {
+        return elbv2
+          .deleteTargetGroup({
+            TargetGroupArn: el,
+          })
+          .promise();
+      })
+    );
+  }
+  await terminateInstances(ec2, process.env.AWS_SECURITYGROUP);
   await deleteGroup(ec2, process.env.AWS_SECURITYGROUP_ELB);
 })();

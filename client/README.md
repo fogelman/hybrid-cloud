@@ -10,4 +10,4 @@ chmod 700 todo
 ## example
 
 - Add new todo `./todo add -t "Homework" -d "Homework about ..."`
-- Remove a todo `./todo remove -"`
+- Remove a todo `./todo remove <id>"`
