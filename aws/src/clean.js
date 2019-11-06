@@ -104,13 +104,13 @@ const terminateInstances = async (ec2, GroupName) => {
           .describeListeners({ LoadBalancerArn: el })
           .promise()
           .then(({ Listeners }) => {
-            console.log(listeners);
-            return Listeners.flatMap(el => {
+            const arr = [];
+            Listeners.forEach(el => {
               if (el.ListenerArn) {
-                return el.ListenerArn;
+                arr.push(el.ListenerArn);
               }
-              return;
             });
+            return arr;
           });
       })
     );

@@ -25,7 +25,7 @@ class TarefaController {
       const tarefa = await api.post('/tarefa', req.body);
       return res.json(tarefa);
     } catch (e) {
-      console.log(e);
+      return res.status(400).json({ error: 'Erro na requisição' });
     }
   }
 
@@ -39,7 +39,7 @@ class TarefaController {
       const tarefa = await api.get(`/tarefa${id}`);
       return res.status(200).json(tarefa);
     } catch (e) {
-      console.log(e);
+      return res.status(400).json({ error: 'Erro na requisição' });
     }
   }
   async list(req, res) {
@@ -47,7 +47,7 @@ class TarefaController {
       const tarefa = await api.get('/tarefa');
       return res.json(tarefa);
     } catch (e) {
-      console.log(e);
+      return res.status(400).json({ error: 'Erro na requisição' });
     }
   }
 
@@ -56,7 +56,7 @@ class TarefaController {
       await api.delete(`/tarefa/${req.params.id}`);
       return res.json({});
     } catch (e) {
-      console.log(e);
+      return res.status(400).json({ error: 'Erro na requisição' });
     }
   }
 
@@ -69,7 +69,7 @@ class TarefaController {
       }
       await api.put(`/tarefa${req.params.id}`, req.body);
     } catch (e) {
-      console.log(e);
+      return res.status(400).json({ error: 'Erro na requisição' });
     }
   }
 }
