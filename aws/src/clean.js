@@ -17,8 +17,8 @@ const deleteGroup = async (ec2, GroupName) => {
       return SecurityGroups;
     });
   if (groups && groups.length > 0) {
-    console.log(`Deletando grupo ${GroupName}`);
     await ec2.deleteSecurityGroup({ GroupName }).promise();
+    console.log(`Grupo ${GroupName} deletado`);
   }
 };
 
@@ -57,10 +57,6 @@ const terminateInstances = async (ec2, GroupName) => {
   const elb = await new AWS.ELB({ apiVersion: '2012-06-01' });
   const elbv2 = await new AWS.ELBv2();
 
-  await terminateInstances(ec2, process.env.AWS_SECURITYGROUP);
-  await deleteGroup(ec2, process.env.AWS_SECURITYGROUP);
-  await ec2.deleteKeyPair({ KeyName: process.env.AWS_KEYNAME }).promise();
-
   const imageIds = await ec2
     .describeImages({
       Filters: [{ Name: 'name', Values: [process.env.AWS_IMAGENAME] }],
@@ -92,12 +88,34 @@ const terminateInstances = async (ec2, GroupName) => {
     });
 
   if (autoScallingIds && autoScallingIds.length > 0) {
-    await autoscaling
-      .suspendProcesses({
-        AutoScalingGroupName: process.env.AWS_AUTOSCALING,
-      })
-      .promise();
+    // await autoscaling
+    //   .suspendProcesses({
+    //     AutoScalingGroupName: process.env.AWS_AUTOSCALING,
+    //   })
+    //   .promise();
 
+    const instances = await autoscaling
+      .describeAutoScalingInstances({})
+      .promise()
+      .then(({ AutoScalingInstances }) => {
+        return AutoScalingInstances.filter(el => {
+          return el.AutoScalingGroupName === process.env.AWS_AUTOSCALING;
+        });
+      });
+
+    if (instances && instances.length > 0) {
+      await Promise.all(
+        instances.map(el => {
+          return autoscaling
+            .detachInstances({
+              InstanceIds: [el.InstanceId],
+              AutoScalingGroupName: process.env.AWS_AUTOSCALING,
+              ShouldDecrementDesiredCapacity: true,
+            })
+            .promise();
+        })
+      );
+    }
     await autoscaling
       .deleteAutoScalingGroup({
         AutoScalingGroupName: process.env.AWS_AUTOSCALING,
@@ -129,20 +147,17 @@ const terminateInstances = async (ec2, GroupName) => {
           .describeListeners({ LoadBalancerArn: el })
           .promise()
           .then(({ Listeners }) => {
-            const arr = [];
-            Listeners.flatMap(el => {
+            return Listeners.flatMap(el => {
               if (el.ListenerArn) {
                 return el.ListenerArn;
               }
               return;
             });
-            return arr;
           });
       })
     );
 
     const listeners = [].concat.apply([], listenersArr);
-    console.log(listeners);
 
     if (listeners && listeners.length > 0) {
       await Promise.all(
@@ -156,9 +171,20 @@ const terminateInstances = async (ec2, GroupName) => {
         })
       );
     }
+
     await Promise.all(
       elbs.map(el => {
         return elbv2.deleteLoadBalancer({ LoadBalancerArn: el }).promise();
+      })
+    );
+
+    await Promise.all(
+      elbs.map(el => {
+        return elbv2
+          .waitFor('loadBalancersDeleted', {
+            LoadBalancerArns: [el],
+          })
+          .promise();
       })
     );
   }
@@ -210,7 +236,9 @@ const terminateInstances = async (ec2, GroupName) => {
       })
     );
   }
-  // await terminateInstances(ec2, process.env.AWS_SECURITYGROUP);
-
+  await terminateInstances(ec2, process.env.AWS_SECURITYGROUP);
+  console.log(`Instâncias do grupo ${process.env.AWS_SECURITYGROUP} deletadas`);
+  await ec2.deleteKeyPair({ KeyName: process.env.AWS_KEYNAME }).promise();
+  await deleteGroup(ec2, process.env.AWS_SECURITYGROUP);
   await deleteGroup(ec2, process.env.AWS_SECURITYGROUP_ELB);
 })();
