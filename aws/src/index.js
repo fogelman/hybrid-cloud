@@ -98,7 +98,6 @@ const describeVpcs = async ec2 => {
 (async () => {
   const ec2 = await new AWS.EC2({ apiVersion: '2016-11-15' });
   const autoscaling = await new AWS.AutoScaling({ apiVersion: '2011-01-01' });
-  const elb = await new AWS.ELB({ apiVersion: '2012-06-01' });
   var elbv2 = new AWS.ELBv2({ apiVersion: '2015-12-01' });
   const vpc = await describeVpcs(ec2);
   const subnets = await ec2

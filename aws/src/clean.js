@@ -80,6 +80,31 @@ const terminateInstances = async (ec2, GroupName) => {
     );
   }
 
+  const autoScallingIds = await autoscaling
+    .describeAutoScalingGroups({
+      AutoScalingGroupNames: [process.env.AWS_AUTOSCALING],
+    })
+    .promise()
+    .then(({ AutoScalingGroups }) => {
+      return AutoScalingGroups.map(el => {
+        return el.AutoScalingGroupName;
+      });
+    });
+
+  if (autoScallingIds && autoScallingIds.length > 0) {
+    await autoscaling
+      .suspendProcesses({
+        AutoScalingGroupName: process.env.AWS_AUTOSCALING,
+      })
+      .promise();
+
+    await autoscaling
+      .deleteAutoScalingGroup({
+        AutoScalingGroupName: process.env.AWS_AUTOSCALING,
+      })
+      .promise();
+  }
+
   const elbs = await elbv2
     .describeLoadBalancers({
       Names: [process.env.AWS_LOADBALANCER],
@@ -98,23 +123,27 @@ const terminateInstances = async (ec2, GroupName) => {
     });
 
   if (elbs && elbs.length > 0) {
-    const listeners = await Promise.all(
+    const listenersArr = await Promise.all(
       elbs.flatMap(el => {
         return elbv2
           .describeListeners({ LoadBalancerArn: el })
           .promise()
           .then(({ Listeners }) => {
             const arr = [];
-            Listeners.forEach(el => {
+            Listeners.flatMap(el => {
               if (el.ListenerArn) {
-                arr.push(el.ListenerArn);
+                return el.ListenerArn;
               }
+              return;
             });
             return arr;
           });
       })
     );
+
+    const listeners = [].concat.apply([], listenersArr);
     console.log(listeners);
+
     if (listeners && listeners.length > 0) {
       await Promise.all(
         listeners.map(el => {
@@ -132,25 +161,6 @@ const terminateInstances = async (ec2, GroupName) => {
         return elbv2.deleteLoadBalancer({ LoadBalancerArn: el }).promise();
       })
     );
-  }
-
-  const autoScallingIds = await autoscaling
-    .describeAutoScalingGroups({
-      AutoScalingGroupNames: [process.env.AWS_AUTOSCALING],
-    })
-    .promise()
-    .then(({ AutoScalingGroups }) => {
-      return AutoScalingGroups.map(el => {
-        return el.AutoScalingGroupName;
-      });
-    });
-
-  if (autoScallingIds && autoScallingIds.length > 0) {
-    await autoscaling
-      .deleteAutoScalingGroup({
-        AutoScalingGroupName: process.env.AWS_AUTOSCALING,
-      })
-      .promise();
   }
 
   const launchConfig = await autoscaling
@@ -200,6 +210,7 @@ const terminateInstances = async (ec2, GroupName) => {
       })
     );
   }
-  await terminateInstances(ec2, process.env.AWS_SECURITYGROUP);
+  // await terminateInstances(ec2, process.env.AWS_SECURITYGROUP);
+
   await deleteGroup(ec2, process.env.AWS_SECURITYGROUP_ELB);
 })();
