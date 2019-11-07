@@ -1,6 +1,6 @@
 const AWS = require('aws-sdk');
-require('dotenv').config();
-
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 AWS.config = new AWS.Config({
   region: process.env.AWS_REGION,
   accessKeyId: process.env.AWS_ACESSKEY,
@@ -54,7 +54,6 @@ const terminateInstances = async (ec2, GroupName) => {
 (async () => {
   const ec2 = await new AWS.EC2({ apiVersion: '2016-11-15' });
   const autoscaling = await new AWS.AutoScaling({ apiVersion: '2011-01-01' });
-  const elb = await new AWS.ELB({ apiVersion: '2012-06-01' });
   const elbv2 = await new AWS.ELBv2();
 
   const imageIds = await ec2
@@ -93,6 +92,20 @@ const terminateInstances = async (ec2, GroupName) => {
     //     AutoScalingGroupName: process.env.AWS_AUTOSCALING,
     //   })
     //   .promise();
+    await autoscaling
+      .updateAutoScalingGroup({
+        AutoScalingGroupName: process.env.AWS_AUTOSCALING,
+        MinSize: 0,
+      })
+      .promise();
+
+    await autoscaling
+      .setDesiredCapacity({
+        AutoScalingGroupName: process.env.AWS_AUTOSCALING,
+        DesiredCapacity: 0,
+        HonorCooldown: false,
+      })
+      .promise();
 
     const instances = await autoscaling
       .describeAutoScalingInstances({})
@@ -104,6 +117,7 @@ const terminateInstances = async (ec2, GroupName) => {
       });
 
     if (instances && instances.length > 0) {
+      console.log('instances');
       await Promise.all(
         instances.map(el => {
           return autoscaling

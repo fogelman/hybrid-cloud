@@ -13,6 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "aws-sdk": "^2.539.0",
-    "dotenv": "^8.1.0"
+    "dotenv": "^8.1.0",
+    "yargs": "^14.2.0"
   }
 }

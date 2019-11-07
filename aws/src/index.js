@@ -268,10 +268,5 @@ const describeVpcs = async ec2 => {
 
   console.log('Criação do Load Balancer listener');
 
-  // await elbv2
-  //   .waitFor('loadBalancerAvailable', {
-  //     Names: [process.env.AWS_LOADBALANCER],
-  //     // ... input parameters ...
-  //   })
-  //   .promise();
+  console.log(`Load balancer está pronto e disponivel na porta: ${'a'}`);
 })();
