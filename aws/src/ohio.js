@@ -4,6 +4,7 @@ const fs = require('fs');
 const { promisify } = require('util');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 
+// MONGO_URI
 AWS.config = new AWS.Config({
   region: 'us-east-2',
   accessKeyId: process.env.AWS_ACESSKEY,
@@ -24,13 +25,15 @@ const instanceRules = {
   MaxCount: 1,
   MinCount: 1,
 };
-const data = `#!/bin/bash
+const data = {
+  mongo: `#!/bin/bash
 apt update -y
 apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
 curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/mongo.sh -o /home/ubuntu/mongo.sh
 chmod +x /home/ubuntu/mongo.sh
 sh /home/ubuntu/mongo.sh
-`;
+`,
+};
 
 const createSecurityGroup = async (ec2, GroupName) => {
   return await ec2
@@ -84,39 +87,11 @@ const authorizeSecurityGroupIngress = async (ec2, GroupId) => {
     .promise();
 };
 
-const describeVpcs = async ec2 => {
-  return await ec2
-    .describeVpcs({
-      Filters: [
-        {
-          Name: 'isDefault',
-          Values: ['true'],
-        },
-      ],
-    })
-    .promise()
-    .then(({ Vpcs }) => {
-      if (Vpcs && Vpcs.length > 0) {
-        return Vpcs[0].VpcId;
-      }
-    });
-};
-
 const run = async () => {
   const ec2 = await new AWS.EC2({
     apiVersion: '2016-11-15',
     region: 'us-east-2',
   });
-
-  // const vpc = await describeVpcs(ec2);
-  // const subnets = await ec2
-  //   .describeSubnets({
-  //     Filters: [{ Name: 'vpc-id', Values: [vpc] }],
-  //   })
-  //   .promise()
-  //   .then(({ Subnets }) => {
-  //     return Subnets.map(el => el.SubnetId);
-  //   });
 
   const groupId = await createSecurityGroup(ec2, process.env.AWS_SECURITYGROUP);
 
@@ -128,8 +103,49 @@ const run = async () => {
     .then(async ({ KeyMaterial: data }) => {
       await promisify(fs.writeFile)('aws-key-ohio.pem', data);
     });
-  const UserData = Buffer.from(data).toString('base64');
-  const { InstanceId: instanceId, PrivateIpAddress: ip } = await ec2
+
+  const { InstanceId: mongoId, PrivateIpAddress: ip } = await ec2
+    .runInstances({
+      ...instanceRules,
+      KeyName: process.env.AWS_KEYNAME,
+      SecurityGroups: [process.env.AWS_SECURITYGROUP],
+      TagSpecifications: [
+        {
+          ResourceType: 'instance',
+          Tags: [
+            {
+              Key: 'Name',
+              Value: process.env.AWS_PROJECTNAME,
+            },
+            {
+              Key: 'Service',
+              Value: 'mongo',
+            },
+          ],
+        },
+      ],
+      UserData: Buffer.from(data.mongo).toString('base64'),
+      DryRun: false,
+    })
+    .promise()
+    .then(({ Instances }) => {
+      return Instances[0];
+    });
+
+  const app = `#!/bin/bash
+  apt update -y
+  apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
+  curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/init.sh -o /home/ubuntu/init.sh
+  chmod +x /home/ubuntu/init.sh
+  sh /home/ubuntu/init.sh
+  curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/webserver.sh -o /home/ubuntu/webserver.sh
+  chmod +x /home/ubuntu/webserver.sh
+  sh /home/ubuntu/webserver.sh
+  echo "export MONGO_URI="${ip}"" >> /home/ubuntu/.bashrc
+  source /home/ubuntu/.bashrc
+  `;
+
+  const { InstanceId: appId } = await ec2
     .runInstances({
       ...instanceRules,
       KeyName: process.env.AWS_KEYNAME,
@@ -145,7 +161,7 @@ const run = async () => {
           ],
         },
       ],
-      UserData,
+      UserData: Buffer.from(app).toString('base64'),
       DryRun: false,
     })
     .promise()
@@ -155,13 +171,15 @@ const run = async () => {
 
   await ec2
     .waitFor('instanceStatusOk', {
-      InstanceIds: [instanceId],
+      InstanceIds: [mongoId, appId],
     })
     .promise()
     .catch(err => {
       console.log(err, err.stack);
     });
   console.log(`Instância criada com sucesso`);
+
+  return '0.0.0.0';
 };
 
 module.exports = run;

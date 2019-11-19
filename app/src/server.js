@@ -2,7 +2,6 @@ const express = require('express');
 const routes = require('./routes');
 const mongoose = require('mongoose');
 const cors = require('cors');
-require('dotenv').config();
 
 class App {
   constructor() {
