@@ -138,10 +138,10 @@ const run = async () => {
   curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/init.sh -o /home/ubuntu/init.sh
   chmod +x /home/ubuntu/init.sh
   sh /home/ubuntu/init.sh
-  curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/webserver.sh -o /home/ubuntu/webserver.sh
-  chmod +x /home/ubuntu/webserver.sh
-  sh /home/ubuntu/webserver.sh
-  echo "export MONGO_URI="${ip}"" >> /home/ubuntu/.bashrc
+  curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/app.sh -o /home/ubuntu/app.sh
+  chmod +x /home/ubuntu/app.sh
+  sh /home/ubuntu/app.sh
+  echo "export MONGO_URI=\"mongodb://${ip}/admin\"" >> /home/ubuntu/.bashrc
   source /home/ubuntu/.bashrc
   `;
 

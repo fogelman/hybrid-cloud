@@ -181,6 +181,8 @@ const describeVpcs = async ec2 => {
 
   await ec2.waitFor('imageAvailable', { ImageIds: [imageId] }).promise();
   console.log('Imagem criada com sucesso');
+
+  await ec2.terminateInstances({ InstanceIds: [instanceId] }).promise();
   await autoscaling
     .createLaunchConfiguration({
       ImageId: imageId,
