@@ -179,7 +179,8 @@ const describeVpcs = async ec2 => {
       return data.ImageId;
     });
 
-  await ec2.waitFor('imageAvailable', { ImageIds: [imageId] });
+  await ec2.waitFor('imageAvailable', { ImageIds: [imageId] }).promise();
+  console.log('Imagem criada com sucesso');
   await autoscaling
     .createLaunchConfiguration({
       ImageId: imageId,
@@ -221,7 +222,7 @@ const describeVpcs = async ec2 => {
     .createAutoScalingGroup({
       AutoScalingGroupName: process.env.AWS_AUTOSCALING,
       AvailabilityZones: [process.env.AWS_AVAILABILITY],
-      HealthCheckGracePeriod: 180,
+      HealthCheckGracePeriod: 120,
       HealthCheckType: 'ELB',
 
       LaunchConfigurationName: process.env.AWS_LAUNCHCONFIG,
@@ -267,6 +268,6 @@ const describeVpcs = async ec2 => {
     .promise();
 
   console.log('Criação do Load Balancer listener');
-
+  await elbv2.waitFor('loadBalancerAvailable').promise();
   console.log(`Load balancer está pronto e disponivel na porta: ${'a'}`);
 })();
