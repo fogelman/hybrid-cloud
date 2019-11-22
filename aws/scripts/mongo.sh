@@ -1,4 +1,5 @@
 #!/bin/bash
-apt install mongodb
-sed -i 's/bindIp = 127.0.0.1/bindIp = 0.0.0.0/g' /etc/mongodb.conf
-service mongod restart
+apt update
+apt install mongodb -y
+sed -i 's/bind_ip = 127.0.0.1/bind_ip = 0.0.0.0/g' /etc/mongodb.conf
+service mongodb restart
