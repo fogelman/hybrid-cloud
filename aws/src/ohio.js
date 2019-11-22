@@ -31,7 +31,7 @@ apt update -y
 apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
 curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/mongo.sh -o /home/ubuntu/mongo.sh
 chmod +x /home/ubuntu/mongo.sh
-sh /home/ubuntu/mongo.sh
+/home/ubuntu/mongo.sh
 `,
 };
 
@@ -155,10 +155,10 @@ const run = async () => {
   apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
   curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/init.sh -o /home/ubuntu/init.sh
   chmod +x /home/ubuntu/init.sh
-  bash /home/ubuntu/init.sh
+  /home/ubuntu/init.sh
   curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/app.sh -o /home/ubuntu/app.sh
   chmod +x /home/ubuntu/app.sh
-  bash /home/ubuntu/app.sh
+  /home/ubuntu/app.sh
   `;
 
   const { InstanceId: appId } = await ec2
