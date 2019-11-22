@@ -53,17 +53,29 @@ const authorizeSecurityGroupIngress = async (ec2, GroupId) => {
     .authorizeSecurityGroupIngress({
       GroupId,
       IpPermissions: [
-        {
-          IpProtocol: 'tcp',
-          FromPort: 80,
-          ToPort: 80,
-          IpRanges: [{ CidrIp: '0.0.0.0/0' }],
-        },
+        // {
+        //   IpProtocol: 'tcp',
+        //   FromPort: 80,
+        //   ToPort: 80,
+        //   IpRanges: [{ CidrIp: '0.0.0.0/0' }],
+        // },
         {
           IpProtocol: 'tcp',
           FromPort: 22,
           ToPort: 22,
           IpRanges: [{ CidrIp: '0.0.0.0/0' }],
+        },
+
+        {
+          IpProtocol: 'tcp',
+          FromPort: 27017,
+          ToPort: 27017,
+          UserIdGroupPairs: [
+            {
+              Description: 'acesso somente ao grupo',
+              GroupId,
+            },
+          ],
         },
       ],
     })
@@ -84,7 +96,7 @@ const authorizeExternalIP = async (GroupId, ip) => {
           IpProtocol: 'tcp',
           FromPort: 3333,
           ToPort: 3333,
-          IpRanges: [{ CidrIp: ip }],
+          IpRanges: [{ CidrIp: ip + '/32' }],
         },
       ],
     })
@@ -138,15 +150,15 @@ const run = async () => {
 
   const app = `#!/bin/bash
   apt update -y
-  echo "export MONGO_URI=\"mongodb://${ip}/admin\"" >> .bashrc
-  source .bashrc
+  echo "export MONGO_URI=\"mongodb://${ip}/admin\"" >> ~/.bashrc
+  source ~/.bashrc
   apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
   curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/init.sh -o /home/ubuntu/init.sh
   chmod +x /home/ubuntu/init.sh
-  sh /home/ubuntu/init.sh
+  bash /home/ubuntu/init.sh
   curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/app.sh -o /home/ubuntu/app.sh
   chmod +x /home/ubuntu/app.sh
-  sh /home/ubuntu/app.sh
+  bash /home/ubuntu/app.sh
   `;
 
   const { InstanceId: appId } = await ec2

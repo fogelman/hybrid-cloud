@@ -131,8 +131,8 @@ const run = async BASE_URL_DB => {
 
   const data = `#!/bin/bash
 apt update -y
-echo "export BASE_URL=\"http://${BASE_URL_DB}\"" >> .bashrc
-source .bashrc
+echo "export BASE_URL=\"http://${BASE_URL_DB}:3333\"" >> ~/.bashrc
+source ~/.bashrc
 apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
 curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/init.sh -o /home/ubuntu/init.sh
 chmod +x /home/ubuntu/init.sh
@@ -169,7 +169,7 @@ update-rc.d webserver.sh enable
 
   const webserver = `#!/bin/bash
     apt update -y
-    echo "export BASE_URL=\"http://${PRIVATE_URL}\"" >> .bashrc
+    echo "export BASE_URL=\"http://${PRIVATE_URL}:3333\"" >> .bashrc
     source .bashrc
     apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
     curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/init.sh -o /home/ubuntu/init.sh
@@ -310,7 +310,7 @@ update-rc.d webserver.sh enable
 
   //console.log('Criação do AutoScalling group');
 
-  const loadbalancers = await elbv2
+  const { loadbalancersARN, loadbalancers } = await elbv2
     .createLoadBalancer({
       Name: process.env.AWS_LOADBALANCER,
       Scheme: 'internet-facing',
@@ -320,7 +320,10 @@ update-rc.d webserver.sh enable
     .promise()
     .catch(e => {})
     .then(({ LoadBalancers }) => {
-      return LoadBalancers.map(el => el.LoadBalancerArn);
+      return {
+        loadbalancersARN: LoadBalancers.map(el => el.LoadBalancerArn),
+        loadbalancers: LoadBalancers,
+      };
     });
   //console.log('Criação do Load Balancer');
 
@@ -332,7 +335,7 @@ update-rc.d webserver.sh enable
           Type: 'forward',
         },
       ],
-      LoadBalancerArn: loadbalancers[0],
+      LoadBalancerArn: loadbalancersARN[0],
       Port: 80,
       Protocol: 'HTTP',
     })
