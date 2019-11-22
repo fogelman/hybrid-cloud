@@ -65,22 +65,26 @@ const authorizeSecurityGroupIngress = async (ec2, GroupId) => {
           ToPort: 22,
           IpRanges: [{ CidrIp: '0.0.0.0/0' }],
         },
+      ],
+    })
+    .promise();
+};
+
+const authorizeExternalIP = async (GroupId, ip) => {
+  console.log(`Autorizando a entrada para o grupo: ${GroupId}`);
+  const ec2 = await new AWS.EC2({
+    apiVersion: '2016-11-15',
+    region: 'us-east-2',
+  });
+  await ec2
+    .authorizeSecurityGroupIngress({
+      GroupId,
+      IpPermissions: [
         {
           IpProtocol: 'tcp',
           FromPort: 3333,
           ToPort: 3333,
-          IpRanges: [{ CidrIp: '0.0.0.0/0' }],
-        },
-        {
-          IpProtocol: 'tcp',
-          FromPort: 27017,
-          ToPort: 27017,
-          UserIdGroupPairs: [
-            {
-              Description: 'acesso somente ao grupo',
-              GroupId,
-            },
-          ],
+          IpRanges: [{ CidrIp: ip }],
         },
       ],
     })
@@ -134,6 +138,8 @@ const run = async () => {
 
   const app = `#!/bin/bash
   apt update -y
+  echo "export MONGO_URI=\"mongodb://${ip}/admin\"" >> .bashrc
+  source .bashrc
   apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
   curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/init.sh -o /home/ubuntu/init.sh
   chmod +x /home/ubuntu/init.sh
@@ -141,8 +147,6 @@ const run = async () => {
   curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/app.sh -o /home/ubuntu/app.sh
   chmod +x /home/ubuntu/app.sh
   sh /home/ubuntu/app.sh
-  echo "export MONGO_URI=\"mongodb://${ip}/admin\"" >> /home/ubuntu/.bashrc
-  source /home/ubuntu/.bashrc
   `;
 
   const { InstanceId: appId } = await ec2
@@ -179,8 +183,17 @@ const run = async () => {
     });
   console.log(`Instância criada com sucesso`);
 
-  return '0.0.0.0';
+  const apiIp = await ec2
+    .describeInstances({
+      InstanceIds: [appId],
+    })
+    .promise()
+    .then(({ Reservations }) => {
+      return Reservations[0].Instances[0].PublicIpAddress;
+    });
+
+  return { ip: apiIp, groupId };
 };
 
-module.exports = run;
-run();
+module.exports.run = run;
+module.exports.authorize = authorizeExternalIP;

@@ -51,7 +51,7 @@ const terminateInstances = async (ec2, GroupName) => {
   }
 };
 
-(async () => {
+module.exports = async () => {
   const ec2 = await new AWS.EC2({ apiVersion: '2016-11-15' });
   const ec2_ohio = await new AWS.EC2({
     apiVersion: '2016-11-15',
@@ -213,6 +213,7 @@ const terminateInstances = async (ec2, GroupName) => {
     );
   }
   await terminateInstances(ec2, process.env.AWS_SECURITYGROUP);
+  await terminateInstances(ec2, process.env.AWS_SECURITYGROUP_SCALE);
   await terminateInstances(ec2_ohio, process.env.AWS_SECURITYGROUP);
   console.log(`Instâncias do grupo ${process.env.AWS_SECURITYGROUP} deletadas`);
 
@@ -220,6 +221,7 @@ const terminateInstances = async (ec2, GroupName) => {
   await ec2_ohio.deleteKeyPair({ KeyName: process.env.AWS_KEYNAME }).promise();
 
   await deleteGroup(ec2, process.env.AWS_SECURITYGROUP);
+  await deleteGroup(ec2, process.env.AWS_SECURITYGROUP_SCALE);
   await deleteGroup(ec2_ohio, process.env.AWS_SECURITYGROUP);
 
   const groupId = await ec2
@@ -240,9 +242,8 @@ const terminateInstances = async (ec2, GroupName) => {
     const references = await ec2
       .describeSecurityGroupReferences({ GroupId: [groupId] })
       .promise();
-    console.log(references);
   }
   await deleteGroup(ec2, process.env.AWS_SECURITYGROUP_ELB).catch(e => {
     console.error('error', e);
   });
-})();
+};
