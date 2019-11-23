@@ -1,8 +1,9 @@
 const express = require('express');
-const routes = require('./routes');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
+
+const routes = require('./routes');
 
 class App {
   constructor() {

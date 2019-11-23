@@ -136,8 +136,8 @@ apt install -y nodejs
 npm install -g pm2
 pm2 startup
 git clone --depth=1 --no-tags https://github.com/Fogelman/hybrid-cloud.git /home/ubuntu/hybrid-cloud
-npm i npm install --prefix /home/ubuntu/hybrid-cloud/web-app
-echo "export BASE_URL=\"http://${BASE_URL_DB}:3333\"" >> /home/ubuntu/hybrid-cloud/web-app/.env
+npm i --prefix /home/ubuntu/hybrid-cloud/web-app
+echo "BASE_URL=\"http://${BASE_URL_DB}:3333\"" >> /home/ubuntu/hybrid-cloud/web-app/.env
 pm2 start /home/ubuntu/hybrid-cloud/web-app/src/index.js --name "app"
 pm2 save
 `;
@@ -155,6 +155,10 @@ pm2 save
               Key: 'Name',
               Value: process.env.AWS_PROJECTNAME,
             },
+            {
+              Key: 'Description',
+              Value: 'redirect requests',
+            },
           ],
         },
       ],
@@ -171,12 +175,11 @@ pm2 save
   curl -sL https://deb.nodesource.com/setup_11.x | sudo -E bash -
   apt install -y nodejs
   npm install -g pm2
-  pm2 startup
+  pm2 startup upstart
   git clone --depth=1 --no-tags https://github.com/Fogelman/hybrid-cloud.git /home/ubuntu/hybrid-cloud
-  npm i npm install --prefix /home/ubuntu/hybrid-cloud/web-app
-  echo "export BASE_URL=\"http://${PRIVATE_URL}:3333\"" >> /home/ubuntu/hybrid-cloud/web-app/.env
-  pm2 start /home/ubuntu/hybrid-cloud/web-app/src/index.js --name "app"
-  pm2 save
+  npm i --prefix /home/ubuntu/hybrid-cloud/web-app
+  echo "BASE_URL=\"http://${PRIVATE_URL}:3333\"" >> /home/ubuntu/hybrid-cloud/web-app/.env
+  pm2 start /home/ubuntu/hybrid-cloud/web-app/src/index.js --name "app" && pm2 save --force
     `;
 
   const instanceId = await ec2
@@ -191,10 +194,6 @@ pm2 save
             {
               Key: 'Name',
               Value: process.env.AWS_PROJECTNAME,
-            },
-            {
-              Key: 'Description',
-              Value: 'redirect requests',
             },
           ],
         },
@@ -239,7 +238,7 @@ pm2 save
       Description: 'Imagem para webserver',
       InstanceId: instanceId,
       Name: process.env.AWS_IMAGENAME,
-      NoReboot: true,
+      NoReboot: false,
     })
     .promise()
     .then(data => {
