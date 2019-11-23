@@ -162,14 +162,13 @@ const run = async () => {
 
   const app = `#!/bin/bash
 apt update -y
-echo "export MONGO_URI=\"mongodb://${ip}/admin\"" >> ~/.bashrc
-source ~/.bashrc
 curl -sL https://deb.nodesource.com/setup_11.x | sudo -E bash -
 apt install -y nodejs
 npm install -g pm2
 pm2 startup
 git clone --depth=1 --no-tags https://github.com/Fogelman/hybrid-cloud.git /home/ubuntu/hybrid-cloud
 npm i npm install --prefix /home/ubuntu/hybrid-cloud/app
+echo "MONGO_URI=\"mongodb://${ip}/admin\"" >> /home/ubuntu/hybrid-cloud/app/.env
 pm2 start /home/ubuntu/hybrid-cloud/app/src/index.js --name "app"
 pm2 save
 `;
