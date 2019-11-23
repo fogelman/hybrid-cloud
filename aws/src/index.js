@@ -5,7 +5,8 @@ const clean = require('./clean');
 (async () => {
   await clean();
   const { ip, groupId } = await ohio();
-  return;
   const BASE_URL = await virginia(ip);
   await authorize(groupId, BASE_URL);
+
+  console.log(BASE_URL, ip);
 })();

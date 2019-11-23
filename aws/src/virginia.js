@@ -172,10 +172,7 @@ const run = async BASE_URL_DB => {
     curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/init.sh -o /home/ubuntu/init.sh
     chmod +x /home/ubuntu/init.sh
     sh /home/ubuntu/init.sh
-    curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/webserver.sh -o /etc/init.d/webserver.sh
-    chmod +x /etc/init.d/webserver.sh
-    update-rc.d webserver.sh defaults
-    update-rc.d webserver.sh enable
+    git clone --depth=1 --no-tags https://github.com/Fogelman/hybrid-cloud.git /home/ubuntu/hybrid-cloud
     npm i npm install --prefix /home/ubuntu/hybrid-cloud/web-app
     echo "export BASE_URL=\"http://${PRIVATE_URL}:3333\"" >> /home/ubuntu/hybrid-cloud/web-app/.env
     pm2 start /home/ubuntu/hybrid-cloud/web-app/src/index.js --name "app"
