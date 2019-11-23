@@ -130,16 +130,16 @@ const run = async BASE_URL_DB => {
     });
 
   const data = `#!/bin/bash
-    apt update -y
-    apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
-    curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/init.sh -o /home/ubuntu/init.sh
-    chmod +x /home/ubuntu/init.sh
-    sh /home/ubuntu/init.sh
-    git clone --depth=1 --no-tags https://github.com/Fogelman/hybrid-cloud.git /home/ubuntu/hybrid-cloud
-    npm i npm install --prefix /home/ubuntu/hybrid-cloud/web-app
-    echo "export BASE_URL=\"http://${BASE_URL_DB}:3333\"" >> /home/ubuntu/hybrid-cloud/web-app/.env
-    pm2 start /home/ubuntu/hybrid-cloud/web-app/src/index.js --name "app"
-    pm2 save
+apt update -y
+curl -sL https://deb.nodesource.com/setup_11.x | sudo -E bash -
+apt install -y nodejs
+npm install -g pm2
+pm2 startup
+git clone --depth=1 --no-tags https://github.com/Fogelman/hybrid-cloud.git /home/ubuntu/hybrid-cloud
+npm i npm install --prefix /home/ubuntu/hybrid-cloud/web-app
+echo "export BASE_URL=\"http://${BASE_URL_DB}:3333\"" >> /home/ubuntu/hybrid-cloud/web-app/.env
+pm2 start /home/ubuntu/hybrid-cloud/web-app/src/index.js --name "app"
+pm2 save
 `;
 
   const { PrivateIpAddress: PRIVATE_URL, InstanceId: redirectId } = await ec2
@@ -167,16 +167,16 @@ const run = async BASE_URL_DB => {
     });
 
   const webserver = `#!/bin/bash
-    apt update -y
-    apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
-    curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/init.sh -o /home/ubuntu/init.sh
-    chmod +x /home/ubuntu/init.sh
-    sh /home/ubuntu/init.sh
-    git clone --depth=1 --no-tags https://github.com/Fogelman/hybrid-cloud.git /home/ubuntu/hybrid-cloud
-    npm i npm install --prefix /home/ubuntu/hybrid-cloud/web-app
-    echo "export BASE_URL=\"http://${PRIVATE_URL}:3333\"" >> /home/ubuntu/hybrid-cloud/web-app/.env
-    pm2 start /home/ubuntu/hybrid-cloud/web-app/src/index.js --name "app"
-    pm2 save
+  apt update -y
+  curl -sL https://deb.nodesource.com/setup_11.x | sudo -E bash -
+  apt install -y nodejs
+  npm install -g pm2
+  pm2 startup
+  git clone --depth=1 --no-tags https://github.com/Fogelman/hybrid-cloud.git /home/ubuntu/hybrid-cloud
+  npm i npm install --prefix /home/ubuntu/hybrid-cloud/web-app
+  echo "export BASE_URL=\"http://${PRIVATE_URL}:3333\"" >> /home/ubuntu/hybrid-cloud/web-app/.env
+  pm2 start /home/ubuntu/hybrid-cloud/web-app/src/index.js --name "app"
+  pm2 save
     `;
 
   const instanceId = await ec2

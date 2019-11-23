@@ -22,7 +22,9 @@ class TarefaController {
           .json({ error: 'Erro na validação do conteúdo do body' });
       }
 
-      const tarefa = await api.post('/tarefa', req.body);
+      const tarefa = await api
+        .post('/tarefa', req.body)
+        .then(({ data }) => data);
       return res.json(tarefa);
     } catch (e) {
       return res.status(400).json({ error: 'Erro na requisição' });
@@ -36,24 +38,26 @@ class TarefaController {
     }
 
     try {
-      const tarefa = await api.get(`/tarefa${id}`);
+      const tarefa = await api.get(`/tarefa${id}`).then(({ data }) => data);
       return res.status(200).json(tarefa);
     } catch (e) {
+      console.error(e);
       return res.status(400).json({ error: 'Erro na requisição' });
     }
   }
   async list(req, res) {
     try {
-      const tarefa = await api.get('/tarefa');
+      const tarefa = await api.get('/tarefa').then(({ data }) => data);
       return res.json(tarefa);
     } catch (e) {
+      console.error(e);
       return res.status(400).json({ error: 'Erro na requisição' });
     }
   }
 
   async delete(req, res) {
     try {
-      await api.delete(`/tarefa/${req.params.id}`);
+      await api.delete(`/tarefa/${req.params.id}`).then(({ data }) => data);
       return res.json({});
     } catch (e) {
       return res.status(400).json({ error: 'Erro na requisição' });
@@ -67,7 +71,10 @@ class TarefaController {
           .status(400)
           .json({ error: 'Erro na validação do conteúdo do body' });
       }
-      await api.put(`/tarefa${req.params.id}`, req.body);
+      await api
+        .put(`/tarefa${req.params.id}`, req.body)
+        .then(({ data }) => data);
+      return res.json({});
     } catch (e) {
       return res.status(400).json({ error: 'Erro na requisição' });
     }
