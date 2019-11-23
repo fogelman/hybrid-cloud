@@ -46,7 +46,6 @@ const createSecurityGroup = async (ec2, GroupName) => {
 };
 
 const authorizeSecurityGroupIngress = async (ec2, GroupId) => {
-  console.log(`Autorizando a entrada para o grupo: ${GroupId}`);
   await ec2
     .authorizeSecurityGroupIngress({
       GroupId,
@@ -75,7 +74,6 @@ const authorizeSecurityGroupIngress = async (ec2, GroupId) => {
 };
 
 const authorizeExternalIP = async (GroupId, ip) => {
-  console.log(`Autorizando a entrada para o grupo: ${GroupId}`);
   const ec2 = await new AWS.EC2({
     apiVersion: '2016-11-15',
     region: 'us-east-2',
@@ -104,7 +102,7 @@ const run = async () => {
   const groupId = await createSecurityGroup(ec2, process.env.AWS_SECURITYGROUP);
 
   await authorizeSecurityGroupIngress(ec2, groupId);
-  console.log('Grupo autorizado');
+
   await ec2
     .createKeyPair({ KeyName: process.env.AWS_KEYNAME })
     .promise()
@@ -145,11 +143,8 @@ const run = async () => {
       InstanceIds: [mongoId],
     })
     .promise()
-    .then(data => {
-      console.log(`Instância criada com sucesso`);
-    })
     .catch(err => {
-      console.log(err, err.stack);
+      console.error(err, err.stack);
     });
 
   const app = `#!/bin/bash
@@ -194,11 +189,8 @@ pm2 save
       InstanceIds: [appId],
     })
     .promise()
-    .then(data => {
-      console.log(`Instância criada com sucesso`);
-    })
     .catch(err => {
-      console.log(err, err.stack);
+      console.error(err, err.stack);
     });
 
   const apiIp = await ec2

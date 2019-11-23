@@ -2,8 +2,22 @@
 
 ## usage
 
+Copy the `.env.example` file to `.env` and fill in the variables
+
 ```
-chmod 700 todo
+cp .env.example .env
+```
+
+Download the dependecies and add execution permission to the `todo` file
+
+```
+npm i
+chmod +x todo
+```
+
+Execute the script
+
+```
 ./todo -h
 ```
 

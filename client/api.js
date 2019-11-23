@@ -1,7 +1,8 @@
 const axios = require("axios");
+require("dotenv/config");
 
 const api = axios.create({
-  baseURL: "http://localhost:3333"
+  baseURL: process.env.BASE_URL
 });
 
 module.exports.add = async (title, description, done = false) => {

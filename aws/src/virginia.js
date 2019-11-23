@@ -1,5 +1,6 @@
 const AWS = require('aws-sdk');
 const fs = require('fs');
+const chalk = require('chalk');
 const { promisify } = require('util');
 require('dotenv/config');
 
@@ -37,8 +38,6 @@ const createSecurityGroup = async (ec2, GroupName) => {
 };
 
 const authorizeSecurityGroupIngress = async (ec2, GroupId, GroupPairs = []) => {
-  console.log(`Autorizando a entrada para o grupo: ${GroupId}`);
-
   const permissions = [
     {
       IpProtocol: 'tcp',
@@ -120,7 +119,7 @@ const run = async BASE_URL_DB => {
   await authorizeSecurityGroupIngress(ec2, groupId, [groupScale]);
   await authorizeSecurityGroupIngress(ec2, groupScale, [groupLBId]);
   await authorizeSecurityGroupIngress(ec2, groupLBId);
-  //console.log('Grupo autorizado');
+
   await ec2
     .createKeyPair({ KeyName: process.env.AWS_KEYNAME })
     .promise()
@@ -216,7 +215,6 @@ pm2 save
     .catch(err => {
       console.error(err, err.stack);
     });
-  //console.log(`Instância criada com sucesso`);
 
   const BASE_URL = await ec2
     .describeInstances({
@@ -248,7 +246,6 @@ pm2 save
     });
 
   await ec2.waitFor('imageAvailable', { ImageIds: [imageId] }).promise();
-  //console.log('Imagem criada com sucesso');
 
   await ec2.terminateInstances({ InstanceIds: [instanceId] }).promise();
   await autoscaling
@@ -261,8 +258,6 @@ pm2 save
     })
     .promise();
 
-  //console.log('Create launch configuration');
-
   const targets = await elbv2
     .createTargetGroup({
       Name: process.env.AWS_TARGETGROUP,
@@ -270,7 +265,6 @@ pm2 save
       Protocol: 'HTTP',
       HealthCheckEnabled: true,
       HealthCheckIntervalSeconds: 10,
-      // HealthCheckPort: '3333',
       HealthCheckProtocol: 'HTTP',
       UnhealthyThresholdCount: 2,
       HealthyThresholdCount: 2,
@@ -285,8 +279,6 @@ pm2 save
         return el.TargetGroupArn;
       });
     });
-
-  //console.log('Target group criado');
 
   await autoscaling
     .createAutoScalingGroup({
@@ -307,8 +299,6 @@ pm2 save
     })
     .promise();
 
-  //console.log('Criação do AutoScalling group');
-
   const { loadbalancersARN, loadbalancers } = await elbv2
     .createLoadBalancer({
       Name: process.env.AWS_LOADBALANCER,
@@ -324,7 +314,6 @@ pm2 save
         loadbalancers: LoadBalancers,
       };
     });
-  //console.log('Criação do Load Balancer');
 
   await elbv2
     .createListener({
@@ -340,14 +329,11 @@ pm2 save
     })
     .promise();
 
-  //console.log('Criação do Load Balancer listener');
   await elbv2.waitFor('loadBalancerAvailable').promise();
   if (loadbalancers.length > 0 && loadbalancers[0].DNSName) {
     console.log(
-      `Load balancer está pronto e disponivel no endereço: ${loadbalancers[0].DNSName}`
+      chalk`região virginia: {green.bold disponivel} no endereço: http://${loadbalancers[0].DNSName}`
     );
-  } else {
-    console.log(`Load balancer está pronto e disponivel`);
   }
 
   return BASE_URL;

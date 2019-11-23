@@ -1,4 +1,5 @@
 const AWS = require('aws-sdk');
+const chalk = require('chalk');
 require('dotenv/config');
 
 AWS.config = new AWS.Config({
@@ -18,7 +19,7 @@ const deleteGroup = async (ec2, GroupName) => {
     });
   if (groups && groups.length > 0) {
     await ec2.deleteSecurityGroup({ GroupName }).promise();
-    console.log(`Grupo ${GroupName} deletado`);
+    //console.log(`Grupo ${GroupName} deletado`);
   }
 };
 
@@ -215,7 +216,7 @@ module.exports = async () => {
   await terminateInstances(ec2, process.env.AWS_SECURITYGROUP);
   await terminateInstances(ec2, process.env.AWS_SECURITYGROUP_SCALE);
   await terminateInstances(ec2_ohio, process.env.AWS_SECURITYGROUP);
-  console.log(`Instâncias do grupo ${process.env.AWS_SECURITYGROUP} deletadas`);
+  //console.log(`Instâncias do grupo ${process.env.AWS_SECURITYGROUP} deletadas`);
 
   await ec2.deleteKeyPair({ KeyName: process.env.AWS_KEYNAME }).promise();
   await ec2_ohio.deleteKeyPair({ KeyName: process.env.AWS_KEYNAME }).promise();
