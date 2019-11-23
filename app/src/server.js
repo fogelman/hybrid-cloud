@@ -10,7 +10,7 @@ class App {
     this.server = express();
     this.middlewares();
     this.routes();
-    // this.database();
+    this.database();
   }
   middlewares() {
     this.server.use(cors());
@@ -36,12 +36,16 @@ class App {
   }
 
   database() {
-    mongoose.connect(process.env.MONGO_URI, {
-      useCreateIndex: true,
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      connectTimeoutMS: 30000,
-    });
+    try {
+      mongoose.connect(process.env.MONGO_URI, {
+        useCreateIndex: true,
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        connectTimeoutMS: 30000,
+      });
+    } catch (e) {
+      console.error("Couldn't connect to instance");
+    }
   }
 }
 
