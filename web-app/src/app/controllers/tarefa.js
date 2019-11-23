@@ -58,7 +58,7 @@ class TarefaController {
   async delete(req, res) {
     try {
       await api.delete(`/tarefa/${req.params.id}`);
-      return res.json({ id: req.params.id });
+      return res.json({});
     } catch (e) {
       return res.status(400).json({ error: 'Erro na requisição' });
     }
