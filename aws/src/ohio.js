@@ -1,10 +1,8 @@
 const AWS = require('aws-sdk');
-const path = require('path');
 const fs = require('fs');
 const { promisify } = require('util');
-require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
+require('dotenv/config');
 
-// MONGO_URI
 AWS.config = new AWS.Config({
   region: 'us-east-2',
   accessKeyId: process.env.AWS_ACESSKEY,

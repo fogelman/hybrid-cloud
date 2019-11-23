@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 const argv = require('yargs');
+const fs = require('fs');
+
 argv.version('1.1.0');
 
 argv.command({

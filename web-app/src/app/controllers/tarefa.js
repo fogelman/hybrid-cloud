@@ -38,7 +38,7 @@ class TarefaController {
     }
 
     try {
-      const tarefa = await api.get(`/tarefa${id}`).then(({ data }) => data);
+      const tarefa = await api.get(`/tarefa/${id}`).then(({ data }) => data);
       return res.status(200).json(tarefa);
     } catch (e) {
       console.error(e);
@@ -57,8 +57,8 @@ class TarefaController {
 
   async delete(req, res) {
     try {
-      await api.delete(`/tarefa/${req.params.id}`).then(({ data }) => data);
-      return res.json({});
+      await api.delete(`/tarefa/${req.params.id}`);
+      return res.json({ id: req.params.id });
     } catch (e) {
       return res.status(400).json({ error: 'Erro na requisição' });
     }
@@ -71,9 +71,7 @@ class TarefaController {
           .status(400)
           .json({ error: 'Erro na validação do conteúdo do body' });
       }
-      await api
-        .put(`/tarefa${req.params.id}`, req.body)
-        .then(({ data }) => data);
+      await api.put(`/tarefa/${req.params.id}`, req.body);
       return res.json({});
     } catch (e) {
       return res.status(400).json({ error: 'Erro na requisição' });

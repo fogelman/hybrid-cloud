@@ -1,3 +1,6 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
+
 const { run: ohio, authorize } = require('./ohio');
 const { run: virginia } = require('./virginia');
 const clean = require('./clean');
