@@ -18,6 +18,9 @@ class App {
     this.server.use('/tarefa', routes);
 
     this.server.use('/healthcheck', (req, res) => {
+      if (process.env.MONGO_URI) {
+        return res.status(200).send(process.env.MONGO_URI);
+      }
       return res.status(200).send();
     });
 
@@ -35,6 +38,7 @@ class App {
       useCreateIndex: true,
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      connectTimeoutMS: 30000,
     });
   }
 }
