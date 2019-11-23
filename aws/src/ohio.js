@@ -55,12 +55,6 @@ const authorizeSecurityGroupIngress = async (ec2, GroupId) => {
       IpPermissions: [
         {
           IpProtocol: 'tcp',
-          FromPort: 3333,
-          ToPort: 3333,
-          IpRanges: [{ CidrIp: '0.0.0.0/0' }],
-        },
-        {
-          IpProtocol: 'tcp',
           FromPort: 22,
           ToPort: 22,
           IpRanges: [{ CidrIp: '0.0.0.0/0' }],

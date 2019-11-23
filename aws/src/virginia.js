@@ -179,7 +179,10 @@ pm2 save
   git clone --depth=1 --no-tags https://github.com/Fogelman/hybrid-cloud.git /home/ubuntu/hybrid-cloud
   npm i --prefix /home/ubuntu/hybrid-cloud/web-app
   echo "BASE_URL=\"http://${PRIVATE_URL}:3333\"" >> /home/ubuntu/hybrid-cloud/web-app/.env
-  pm2 start /home/ubuntu/hybrid-cloud/web-app/src/index.js --name "app" && pm2 save --force
+  curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/webserver.sh -o /etc/init.d/webserver.sh
+  chmod +x /etc/init.d/webserver.sh
+  update-rc.d webserver.sh defaults
+  update-rc.d webserver.sh enable
     `;
 
   const instanceId = await ec2
