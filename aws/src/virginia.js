@@ -343,9 +343,10 @@ update-rc.d webserver.sh enable
 
   //console.log('Criação do Load Balancer listener');
   await elbv2.waitFor('loadBalancerAvailable').promise();
-  console.log('loadbalancer', loadbalancers);
   if (loadbalancers.length > 0 && loadbalancers[0].DNSName) {
-    console.log(`Load balancer está pronto e disponivel no endereço: ${'a'}`);
+    console.log(
+      `Load balancer está pronto e disponivel no endereço: ${loadbalancers[0].DNSName}`
+    );
   } else {
     console.log(`Load balancer está pronto e disponivel`);
   }

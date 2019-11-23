@@ -8,7 +8,7 @@ class App {
     this.server = express();
     this.middlewares();
     this.routes();
-    this.database();
+    // this.database();
   }
   middlewares() {
     this.server.use(cors());

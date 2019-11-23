@@ -53,12 +53,12 @@ const authorizeSecurityGroupIngress = async (ec2, GroupId) => {
     .authorizeSecurityGroupIngress({
       GroupId,
       IpPermissions: [
-        // {
-        //   IpProtocol: 'tcp',
-        //   FromPort: 80,
-        //   ToPort: 80,
-        //   IpRanges: [{ CidrIp: '0.0.0.0/0' }],
-        // },
+        {
+          IpProtocol: 'tcp',
+          FromPort: 3333,
+          ToPort: 3333,
+          IpRanges: [{ CidrIp: '0.0.0.0/0' }],
+        },
         {
           IpProtocol: 'tcp',
           FromPort: 22,
@@ -148,18 +148,31 @@ const run = async () => {
       return Instances[0];
     });
 
+  await ec2
+    .waitFor('instanceStatusOk', {
+      InstanceIds: [mongoId],
+    })
+    .promise()
+    .then(data => {
+      console.log(`Instância criada com sucesso`);
+    })
+    .catch(err => {
+      console.log(err, err.stack);
+    });
+
   const app = `#!/bin/bash
-  apt update -y
-  echo "export MONGO_URI=\"mongodb://${ip}/admin\"" >> ~/.bashrc
-  source ~/.bashrc
-  apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
-  curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/init.sh -o /home/ubuntu/init.sh
-  chmod +x /home/ubuntu/init.sh
-  /home/ubuntu/init.sh
-  curl -fsSl https://raw.githubusercontent.com/Fogelman/hybrid-cloud/master/aws/scripts/app.sh -o /home/ubuntu/app.sh
-  chmod +x /home/ubuntu/app.sh
-  /home/ubuntu/app.sh
-  `;
+apt update -y
+echo "export MONGO_URI=\"mongodb://${ip}/admin\"" >> ~/.bashrc
+source ~/.bashrc
+curl -sL https://deb.nodesource.com/setup_11.x | sudo -E bash -
+apt install -y nodejs
+npm install -g pm2
+pm2 startup
+git clone --depth=1 --no-tags https://github.com/Fogelman/hybrid-cloud.git /home/ubuntu/hybrid-cloud
+npm i npm install --prefix /home/ubuntu/hybrid-cloud/app
+pm2 start /home/ubuntu/hybrid-cloud/app/src/index.js --name "app"
+pm2 save
+`;
 
   const { InstanceId: appId } = await ec2
     .runInstances({
@@ -187,13 +200,15 @@ const run = async () => {
 
   await ec2
     .waitFor('instanceStatusOk', {
-      InstanceIds: [mongoId, appId],
+      InstanceIds: [appId],
     })
     .promise()
+    .then(data => {
+      console.log(`Instância criada com sucesso`);
+    })
     .catch(err => {
       console.log(err, err.stack);
     });
-  console.log(`Instância criada com sucesso`);
 
   const apiIp = await ec2
     .describeInstances({
