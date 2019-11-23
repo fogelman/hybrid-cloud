@@ -9,6 +9,6 @@
 # Short-Description: Configuration for hybrid cloud
 ### END INIT INFO
 
-pm2 start /home/ubuntu/hydrid-cloud/app/src/index.js --name "app"
+pm2 start /home/ubuntu/hydrid-cloud/web-app/src/index.js --name "app"
 pm2 save
 exit 0
