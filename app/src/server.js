@@ -20,7 +20,7 @@ class App {
     this.server.use('/tarefa', routes);
 
     this.server.use('/healthcheck', (req, res) => {
-      return res.status(200).send(process.env.MONGO_URI);
+      return res.status(200).send();
     });
 
     this.server.use((req, res) => {
