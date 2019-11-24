@@ -38,7 +38,6 @@ AWS_AUTOSCALING="${project}"
 AWS_TARGETGROUP="${project}"
 AWS_LAUNCHTEMPLATE="${project}"
   `;
-  console.info(env);
   await promisify(fs.writeFile)(path.resolve(__dirname, '..', '.env'), env);
   rl.close();
 })();
