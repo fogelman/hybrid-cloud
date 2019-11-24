@@ -21,7 +21,7 @@ Execute the script
 ./todo -h
 ```
 
-## example
+## examples:
 
 - Add new todo `./todo add -t "Homework" -d "Homework about ..."`
 - Remove a todo `./todo remove <id>"`

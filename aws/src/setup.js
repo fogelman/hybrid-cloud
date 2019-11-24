@@ -1,48 +1,44 @@
-#!/usr/bin/env node
-const argv = require('yargs');
+// https://gist.github.com/tinovyatkin/4316e302d8419186fe3c6af3f26badff
+const readline = require('readline');
 const fs = require('fs');
+const { promisify } = require('util');
+const path = require('path');
 
-argv.version('1.1.0');
+readline.Interface.prototype.question[promisify.custom] = function(prompt) {
+  return new Promise(resolve =>
+    readline.Interface.prototype.question.call(this, prompt, resolve)
+  );
+};
+readline.Interface.prototype.ask = promisify(
+  readline.Interface.prototype.question
+);
 
-argv.command({
-  command: '',
-  describe: 'Add new todo',
-  aliases: [],
-  builder: {
-    title: {
-      describe: 'Todo title',
-      demandOption: true,
-      type: 'string',
-      alias: 't',
-    },
-    description: {
-      describe: 'Description of todo',
-      demandOption: true,
-      type: 'string',
-      alias: 'd',
-    },
-    done: {
-      describe: 'Status of todo',
-      demandOption: false,
-      type: 'boolean',
-      default: false,
-    },
-  },
-  strict: true,
-  handler: async argv => {
-    const { title, description, done } = argv;
-    tarefa.add(title, description, done);
-    return;
-  },
-});
+(async () => {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  const key = await rl.ask('AWS Access Key ID []: ');
+  const secret = await rl.ask('AWS Secret Access Key []: ');
+  const project = await rl.ask('PROJECT name []: ');
+  const env = `AWS_REGION="us-east-1"
+AWS_AVAILABILITY="us-east-1a"
+AWS_ACESSKEY="${key}"
+AWS_SECRETACCESSKEY="${secret}"
 
-argv
-  .help()
-  .locale('en')
-  .alias('help', 'h')
-  .alias('version', 'v')
-  .demandCommand(1, 'You have to select at least one command to continue!')
-  .showHelpOnFail(true)
-  .detectLocale(true)
-  .strict()
-  .recommendCommands().argv;
+AWS_PROJECTNAME="${project}"
+AWS_SECURITYGROUP="${project}"
+AWS_SECURITYGROUP_SCALE="${project}-scale"
+AWS_SECURITYGROUP_ELB="${project}-elb"
+AWS_KEYNAME="${project}"
+AWS_IMAGENAME="${project}"
+AWS_LOADBALANCER="${project}"
+AWS_LAUNCHCONFIG="${project}"
+AWS_AUTOSCALING="${project}"
+AWS_TARGETGROUP="${project}"
+AWS_LAUNCHTEMPLATE="${project}"
+  `;
+  console.info(env);
+  await promisify(fs.writeFile)(path.resolve(__dirname, '..', '.env'), env);
+  rl.close();
+})();

@@ -7,8 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "virginia": "node ./src/virginia.js",
     "ohio": "node ./src/ohio.js",
-    "clean": "node ./src/clean.js",
-    "start": "node ./src/index.js"
+    "clean": "node -e \"(async ()=>{await require('./src/clean')()})()\"",
+    "start": "node ./src/index.js",
+    "setup": "node ./src/setup.js"
   },
   "keywords": [],
   "author": "",
