@@ -67,9 +67,12 @@ module.exports = async () => {
     })
     .promise()
     .then(data => {
-      return data.Images.flatMap(image => {
-        return image.ImageId;
-      });
+      if ('Images' in data && data.Images > 0) {
+        return data.Images.flatMap(image => {
+          return image.ImageId;
+        });
+      }
+      return null;
     });
 
   if (imageIds && imageIds.length > 0) {
@@ -124,6 +127,9 @@ module.exports = async () => {
           .describeListeners({ LoadBalancerArn: el })
           .promise()
           .then(({ Listeners }) => {
+            if (!Listeners && Listeners.length === 0) {
+              return null;
+            }
             return Listeners.flatMap(el => {
               if (el.ListenerArn) {
                 return el.ListenerArn;
